@@ -1,0 +1,9 @@
+rootProject.name = 'logistics-app'
+
+include 'discovery-service'
+include 'gateway-service'
+include 'fleet-service'
+include 'shipping-service'
+include 'analytics-service'
+include 'function-service'
+

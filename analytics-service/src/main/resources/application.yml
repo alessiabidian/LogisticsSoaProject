@@ -1,0 +1,26 @@
+server:
+  port: 8083
+
+spring:
+  application:
+    name: analytics-service
+  kafka:
+    # Use the docker service name if running inside docker, or localhost if running locally
+    bootstrap-servers: ${KAFKA_HOST:logistics-kafka}:9092
+    consumer:
+      group-id: analytics_group_v2 #analytics_group
+      auto-offset-reset: latest #earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        spring.json.trusted.packages: "*"
+        spring.json.use.type.headers: false
+        spring.json.value.default.type: com.logistics.analyticsservice.model.RouteEvent
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://${EUREKA_HOST:logistics-discovery}:8761/eureka/

@@ -1,0 +1,52 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: gateway-service
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: http://localhost:8180/realms/logistics-realm
+          jwk-set-uri: http://localhost:8180/realms/logistics-realm/protocol/openid-connect/certs
+  cloud:
+    gateway:
+      globalcors:
+        cors-configurations:
+          '[/**]':
+            allowedOrigins: "http://localhost:4200"
+            allowedMethods: "*"
+            allowedHeaders: "*"
+      discovery:
+        locator:
+          enabled: true
+          lower-case-service-id: true
+      default-filters:
+        - DedupeResponseHeader=Access-Control-Allow-Origin Access-Control-Allow-Credentials
+      routes:
+        - id: fleet-service
+          uri: lb://fleet-service
+          predicates:
+            - Path=/api/vehicles/**
+        - id: shipping-service
+          uri: lb://shipping-service
+          predicates:
+            - Path=/api/shipments/**
+        - id: analytics-service
+          uri: lb://analytics-service
+          predicates:
+            - Path=/api/analytics/**
+        - id: function-service
+          uri: lb://function-service
+          predicates:
+              - Path=/api/waybills/**
+        - id: shipping-websocket
+          uri: lb:ws://shipping-service
+          predicates:
+            - Path=/ws/**
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka/

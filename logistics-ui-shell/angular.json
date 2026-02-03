@@ -1,0 +1,88 @@
+{
+	"$schema": "./node_modules/@angular/cli/lib/config/schema.json",
+	"version": 1,
+	"cli": {
+		"packageManager": "npm",
+		"analytics": "4ebca8c1-ed96-4d41-bfa7-1bc23d248f56"
+	},
+	"newProjectRoot": "projects",
+	"projects": {
+		"logistics-ui-shell": {
+			"projectType": "application",
+			"schematics": {},
+			"root": "",
+			"sourceRoot": "src",
+			"prefix": "app",
+			"architect": {
+				"build": {
+					"builder": "ngx-build-plus:browser",
+					"options": {
+						"tsConfig": "tsconfig.app.json",
+						"assets": [
+							{
+								"glob": "**/*",
+								"input": "public",
+								"output": "."
+							}
+						],
+						"styles": [
+							"src/styles.css"
+						],
+						"main": "src/main.ts",
+						"outputPath": "dist/logistics-ui-shell",
+						"index": "src/index.html",
+						"extraWebpackConfig": "webpack.config.js",
+						"commonChunk": false
+					},
+					"configurations": {
+						"production": {
+							"optimization": false,
+  							"buildOptimizer": false,
+							"budgets": [
+								{
+									"type": "initial",
+									"maximumWarning": "500kB",
+									"maximumError": "1MB"
+								},
+								{
+									"type": "anyComponentStyle",
+									"maximumWarning": "4kB",
+									"maximumError": "8kB"
+								}
+							],
+							"outputHashing": "all",
+							"extraWebpackConfig": "webpack.prod.config.js"
+						},
+						"development": {
+							"optimization": false,
+							"extractLicenses": false,
+							"sourceMap": true
+						}
+					},
+					"defaultConfiguration": "production"
+				},
+				"serve": {
+					"builder": "ngx-build-plus:dev-server",
+					"configurations": {
+						"production": {
+							"buildTarget": "logistics-ui-shell:build:production",
+							"extraWebpackConfig": "webpack.prod.config.js"
+						},
+						"development": {
+							"buildTarget": "logistics-ui-shell:build:development"
+						}
+					},
+					"defaultConfiguration": "development",
+					"options": {
+						"port": 4200,
+						"publicHost": "http://localhost:4200",
+						"extraWebpackConfig": "webpack.config.js"
+					}
+				},
+				"test": {
+					"builder": "@angular/build:unit-test"
+				}
+			}
+		}
+	}
+}
