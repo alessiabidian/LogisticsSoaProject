@@ -56,6 +56,7 @@ C4Container
 
     Container_Boundary(infra, "Infrastructure Layer") {
         ContainerDb(db, "PostgreSQL", "SQL Database", "Stores Shipments and Vehicle data.")
+        ContainerDb(redis, "Redis", "In-Memory Cache", "Rate Limiting counters for API Gateway.")
         ContainerDb(broker, "RabbitMQ", "Message Broker", "Async communication (Fleet updates, PDF generation).")
         ContainerDb(kafka, "Kafka", "Event Streaming", "High-throughput Analytics ingestion.")
     }
@@ -66,6 +67,7 @@ C4Container
     Rel(shell, gateway, "Live Updates", "WebSocket (STOMP)")
 
     Rel(gateway, discovery, "Service Lookup", "Eureka API")
+    Rel(gateway, redis, "Checks Rate Limit", "RESP")
     Rel(gateway, shipping, "Routes /api/shipments", "Load Balanced HTTP")
     Rel(gateway, fleet, "Routes /api/vehicles", "Load Balanced HTTP")
     Rel(gateway, analytics, "Routes /api/analytics", "Load Balanced HTTP")
@@ -96,8 +98,10 @@ sequenceDiagram
     participant DB as PostgreSQL
     participant Rabbit as RabbitMQ
     participant Kafka as Kafka
-    participant Analytics as Analytics Service
+    participant Fleet as Fleet Service
     participant FaaS as Function Service
+    participant Analytics as Analytics Service
+    
 
     Note over User, Gateway: User clicks "Dispatch" in the UI
 
@@ -111,11 +115,21 @@ sequenceDiagram
     
     par RabbitMQ Flow (Operational)
         ShipService->>Rabbit: Publish (ShipmentEvent)
+        
+        Note right of Rabbit: Fan-out to multiple queues
+        
         Rabbit->>FaaS: Consume Message
         activate FaaS
         FaaS->>FaaS: Generate PDF Waybill
         FaaS->>FaaS: Save /waybills/ticket.pdf
         deactivate FaaS
+        
+        Rabbit->>Fleet: Consume Message
+        activate Fleet
+        Fleet->>Fleet: Set Vehicle "Busy"
+        Fleet->>DB: UPDATE t_vehicles
+        deactivate Fleet
+        
     and Kafka Flow (Analytics)
         ShipService->>Kafka: Publish (RouteEvent)
         Kafka->>Analytics: Consume Message
