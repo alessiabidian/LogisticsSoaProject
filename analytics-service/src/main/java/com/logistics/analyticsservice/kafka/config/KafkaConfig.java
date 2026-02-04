@@ -10,7 +10,7 @@ public class KafkaConfig {
 
     @Bean
     public NewTopic routeTopic() {
-        return TopicBuilder.name("logistics_routes") // NEW TOPIC NAME
+        return TopicBuilder.name("logistics_routes")
                 .partitions(3)
                 .replicas(1)
                 .build();

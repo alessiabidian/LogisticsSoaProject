@@ -23,7 +23,6 @@ public class AnalyticsProducer {
 
         LOGGER.info("Sending Route Analytics to Kafka: {} -> {}", origin, destination);
 
-        // Build the message for the 'logistics_routes' topic
         Message<RouteEvent> message = MessageBuilder
                 .withPayload(event)
                 .setHeader(KafkaHeaders.TOPIC, "logistics_routes")

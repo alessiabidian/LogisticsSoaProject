@@ -28,7 +28,7 @@ public class WaybillController {
     @Autowired
     private WaybillFunction waybillFunction;
 
-    // 1. Generate a Waybill on demand (POST)
+    // Generate a Waybill on demand (POST)
     @PostMapping("/generate")
     public ResponseEntity<String> createWaybill(@RequestBody ShipmentEvent event) {
         // Call the public method directly
@@ -36,7 +36,7 @@ public class WaybillController {
         return ResponseEntity.ok("Generated: " + filename);
     }
 
-    // 2. List all generated files
+    // List all generated files
     @GetMapping
     public List<String> listWaybills() {
         File folder = new File(WaybillFunction.STORAGE_DIR);
@@ -49,7 +49,7 @@ public class WaybillController {
                 .collect(Collectors.toList());
     }
 
-    // 3. Download a specific PDF
+    // Download a specific PDF
     @GetMapping("/{filename}")
     public ResponseEntity<Resource> downloadWaybill(@PathVariable String filename) {
         try {
@@ -78,7 +78,7 @@ public class WaybillController {
             return ResponseEntity.internalServerError().build();
         }
 
-        // 2. Read it back immediately
+        // Read it back immediately
         try {
             Path filePath = Paths.get(WaybillFunction.STORAGE_DIR).resolve(filename).normalize();
             Resource resource = new UrlResource(filePath.toUri());

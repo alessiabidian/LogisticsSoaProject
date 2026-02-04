@@ -22,12 +22,10 @@ public class ShipmentController {
 
     private final ShipmentProducer shipmentProducer;
     private final SimpMessagingTemplate messagingTemplate;
-    private final ShipmentRepository shipmentRepository; // <--- INJECT IT HERE
+    private final ShipmentRepository shipmentRepository;
 
-    // INJECT THE KAFKA PRODUCER
     private final AnalyticsProducer analyticsProducer;
 
-    // 1. GET Endpoint (Fixes the 404/Empty list issue)
     @GetMapping
     public List<Shipment> getAllShipments() {
         return shipmentRepository.findAll();
@@ -36,8 +34,6 @@ public class ShipmentController {
     @GetMapping("/label/{trackingId}")
     public ResponseEntity<byte[]> getLabel(@PathVariable String trackingId) {
         // 1. Find the Shipment (In a real app, use the repository)
-        // For this demo, we'll assume we can find it or just use the ID to generate the label
-        // Shipment shipment = shipmentRepository.findByTrackingId(trackingId)...
 
         // 2. Generate a simple HTML Label
         String labelContent = "<html><body>" +
@@ -70,7 +66,7 @@ public class ShipmentController {
         shipment.setTrackingId(UUID.randomUUID().toString());
         shipment.setStatus("DISPATCHED");
 
-        // SAVE TO DB (This was missing!)
+        // SAVE TO DB
         shipmentRepository.save(shipment);
 
         // Notify Fleet Service via RabbitMQ
@@ -92,7 +88,7 @@ public class ShipmentController {
         String notification = "{\"status\":\"DISPATCHED\", \"trackingId\":\"" + shipment.getTrackingId() + "\"}";
         messagingTemplate.convertAndSend("/topic/shipments", notification);
 
-        // 5. Notify Analytics (Kafka) - NEW CODE
+        // 5. Notify Analytics (Kafka)
         try {
             analyticsProducer.sendRouteStats(shipment.getOrigin(), shipment.getDestination());
         } catch (Exception e) {

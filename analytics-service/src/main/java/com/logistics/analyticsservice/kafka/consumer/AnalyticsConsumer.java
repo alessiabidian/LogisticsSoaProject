@@ -19,8 +19,7 @@ public class AnalyticsConsumer {
 
     @KafkaListener(topics = "logistics_routes", groupId = "analytics_group")
     public void consume(RouteEvent event) {
-        // We only care about the Destination city for "Dispatches to city"
-        // If you want to count both, keep both merges.
+
         cityPopularityIndex.merge(event.getDestination(), 1, Integer::sum);
 
         LOGGER.info("New dispatch to {}. Total for city: {}",

@@ -14,8 +14,6 @@ public class ShipmentEvent {
     private Long vehicleId;
     private Double weight;
 
-    // --- ADDED FIELDS ---
-    // These are critical for the PDF Waybill!
     private String origin;
     private String destination;
     private String licensePlate;

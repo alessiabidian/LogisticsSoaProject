@@ -59,7 +59,6 @@ public class WaybillFunction {
             Font contentFont = FontFactory.getFont(FontFactory.COURIER, 14);
             document.add(new Paragraph("TRACKING ID:  " + event.getTrackingId(), FontFactory.getFont(FontFactory.COURIER_BOLD, 16)));
 
-            // Handle potential nulls safely
             String origin = event.getOrigin() != null ? event.getOrigin() : "N/A";
             String dest = event.getDestination() != null ? event.getDestination() : "N/A";
 
