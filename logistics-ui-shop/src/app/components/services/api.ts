@@ -21,6 +21,7 @@ export interface Shipment {
   origin: string;
   destination: string;
   weight: number;
+  licensePlate?: string;
 }
 
 @Injectable({
@@ -137,19 +138,20 @@ export class ApiService {
   }
 
   // --- Dispatch ---
-  dispatchShipment(vehicleId: number, origin: string, destination: string, weight: number) {
+  dispatchShipment(vehicleId: number, origin: string, destination: string, weight: number, licensePlate: string) {
     const headers = this.getAuthHeaders();
     const payload = {
         vehicleId,
         origin,
         destination,
         weight,
-        packageCount: 1
+        packageCount: 1,
+        licensePlate: licensePlate
     };
 
     return this.http.post(
         `${this.gatewayUrl}/api/shipments/dispatch`,
-        { vehicleId, origin, destination, weight, packageCount: 1 },
+        { vehicleId, origin, destination, weight, packageCount: 1, licensePlate: licensePlate },
         { headers, responseType: 'text' }
     );
   }

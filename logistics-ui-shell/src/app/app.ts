@@ -69,15 +69,12 @@ export class AppComponent implements OnInit {
   private rxStomp = inject(RxStompService);
   private api = inject(ApiService);
 
-  // FIX: Create a direct reference to the stream instead of a boolean variable
   wsState$ = this.rxStomp.connected$;
   
   notifications: string[] = [];
   tempToken = '';
 
   ngOnInit() {
-    // FIX: Removed manual subscription to 'connected$'. The template handles it now.
-    
     // Listen for Shipment Updates
     this.rxStomp.watch('/topic/shipments').subscribe(msg => {
       const content = this.tryParse(msg.body);

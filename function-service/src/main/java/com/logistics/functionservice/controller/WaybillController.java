@@ -1,5 +1,6 @@
 package com.logistics.functionservice.controller;
 
+import com.logistics.functionservice.dto.ShipmentEvent;
 import com.logistics.functionservice.dto.ShipmentInfo;
 import com.logistics.functionservice.function.WaybillFunction;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -25,12 +26,13 @@ import java.util.stream.Collectors;
 public class WaybillController {
 
     @Autowired
-    private Function<ShipmentInfo, String> generateWaybill;
+    private WaybillFunction waybillFunction;
 
     // 1. Generate a Waybill on demand (POST)
     @PostMapping("/generate")
-    public ResponseEntity<String> createWaybill(@RequestBody ShipmentInfo info) {
-        String filename = generateWaybill.apply(info);
+    public ResponseEntity<String> createWaybill(@RequestBody ShipmentEvent event) {
+        // Call the public method directly
+        String filename = waybillFunction.createPdf(event);
         return ResponseEntity.ok("Generated: " + filename);
     }
 
@@ -68,9 +70,13 @@ public class WaybillController {
     }
 
     @PostMapping("/generate-download")
-    public ResponseEntity<Resource> generateAndDownload(@RequestBody ShipmentInfo info) {
-        // 1. Generate the file
-        String filename = generateWaybill.apply(info);
+    public ResponseEntity<Resource> generateAndDownload(@RequestBody ShipmentEvent event) {
+        // 1. Generate the file using the public method (NOT .apply)
+        String filename = waybillFunction.createPdf(event);
+
+        if (filename == null) {
+            return ResponseEntity.internalServerError().build();
+        }
 
         // 2. Read it back immediately
         try {
@@ -79,7 +85,8 @@ public class WaybillController {
 
             return ResponseEntity.ok()
                     .contentType(MediaType.APPLICATION_PDF)
-                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"waybill-" + info.getTrackingId() + ".pdf\"")
+                    // Use event.getTrackingId() for the download filename
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"waybill-" + event.getTrackingId() + ".pdf\"")
                     .body(resource);
         } catch (MalformedURLException e) {
             return ResponseEntity.badRequest().build();

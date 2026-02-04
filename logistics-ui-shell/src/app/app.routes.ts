@@ -13,7 +13,7 @@ export const routes: Routes = [
         loadRemoteModule({
             type: 'module',
             remoteEntry: 'http://localhost:4201/remoteEntry.js', // Points to UI-SHOP
-            exposedModule: './FleetComponent' // Matches your Shop exposure
+            exposedModule: './FleetComponent' // Matches Shop exposure
         }).then(m => m.FleetComponent)
   },
   {
@@ -22,7 +22,7 @@ export const routes: Routes = [
         loadRemoteModule({
             type: 'module',
             remoteEntry: 'http://localhost:4201/remoteEntry.js', // Points to UI-SHOP
-            exposedModule: './ShipmentListComponent' // Matches your Shop exposure
+            exposedModule: './ShipmentListComponent' // Matches Shop exposure
         }).then(m => m.ShipmentListComponent)
   }
 ];

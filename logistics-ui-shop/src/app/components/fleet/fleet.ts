@@ -171,7 +171,8 @@ export class FleetComponent implements OnInit {
         this.selectedVehicle.id,
         this.dispatchData.origin,
         this.dispatchData.destination,
-        this.dispatchData.weight
+        this.dispatchData.weight,
+        this.selectedVehicle.licensePlate
     ).subscribe({
       next: () => {
         alert('Shipment Dispatched! Vehicle is now en route.');

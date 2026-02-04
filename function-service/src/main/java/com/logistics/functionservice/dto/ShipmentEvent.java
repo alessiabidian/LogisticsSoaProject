@@ -1,4 +1,4 @@
-package com.logistics.shippingservice.dto;
+package com.logistics.functionservice.dto;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;

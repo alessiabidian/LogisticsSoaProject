@@ -19,12 +19,12 @@ public class Shipment {
 
     private String trackingId;      // The unique UUID for the customer
     private String status;          // "PENDING", "DISPATCHED", "DELIVERED"
-    private Long vehicleId;         // The ID of the truck assigned
-    private String origin;          // Departure city
-    private String destination;     // Arrival city
+    private Long vehicleId;
+    private String origin;
+    private String destination;
     private Double weight;
+    //@Transient
+    private String licensePlate;
 
-    // In Logistics, quantity is usually 1 (one shipment = one process)
-    // but you can keep it if you are shipping "number of packages"
     private Integer packageCount;
 }

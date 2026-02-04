@@ -1,188 +1,234 @@
 # How to Build Micro-Frontends with Angular and Webpack Module Federation
 
+## Tutorial: Event-Driven PDF Generation with Spring Cloud Function & RabbitMQ
+Project: Logistics Management System Repository - Author: Alessia Bidian
+
 ## 1. Introduction
+   In modern microservices architectures, long-running tasks (like generating PDF documents, sending emails, or image processing) should never block the main user flow. If a user clicks "Dispatch Shipment", they expect an immediate confirmation, not a spinning loading icon while the server draws a PDF.
 
-As enterprise applications grow, monolithic frontends often become development bottlenecks. Large codebases lead to slow build times, tight coupling, and coordination headaches between teams.
+This tutorial demonstrates how to implement a Fire-and-Forget pattern using RabbitMQ and Spring Cloud Function. A system will be built where the Shipping Service dispatches an order, and a separate Function Service (FaaS) generates a Waybill PDF asynchronously.
 
-**Micro-Frontend Architecture** solves this by splitting a large application into smaller, independent applications. These "Micro-Frontends" can be developed, deployed, and tested separately, yet they appear as a single, unified application to the end-user.
+## 2. Architecture Overview
+   The system consists of three main components:
 
-This tutorial guides you through implementing this architecture using **Angular** and **Webpack 5 Module Federation**.
+->Shipping Service (Producer): Receives the user request, saves the shipment to the DB, and publishes a ShipmentEvent to the message broker.
 
-## 2. Core Concepts
+->RabbitMQ (Broker): Acts as the buffer, holding the message until it can be processed.
 
-Before writing code, it is essential to understand the two main roles in Module Federation:
+->Function Service (Consumer): A stateless microservice that listens to the broker, generates the PDF, and saves it to storage.
 
-1. **The Host (Shell)**: This is the main container application. It handles the core layout (navigation, authentication) and is responsible for dynamically loading other applications.
-2. **The Remote:** This is a domain-specific application (e.g., an Inventory or User Profile module). It exposes specific parts of itself (Components, Modules, Routes) that the Host can consume.
-
-**The Example Scenario**
-
-In this guide, we will build a system with:
-
-* **Host**: A "Shell" application running on port 4200.
-* **Remote**: A "Shop" application running on port 4201.
-
-## 3. Prerequisites
-
-* **Angular CLI**: Version 17+ (Standalone components recommended)
-* **Node.js**: Version 18+
-* **Library**: `@angular-architects/module-federation` (The industry standard for Angular).
-
-## 4. Implementation Guide
-
-### Step 1: Project Scaffolding
-
-Start by generating two separate Angular applications. It is best practice to keep them in separate folders or a monorepo (like Nx), but for simplicity, we will generate them as standard CLI projects.
-
-```shell
-# 1. Create the Host (The Shell)
-ng new shell-app --standalone --style=css --routing=true
-
-# 2. Create the Remote (The Feature App)
-ng new remote-app --standalone --style=css --routing=true
+## 3. Step 1: Infrastructure (Docker)
+   We use Docker Compose to spin up RabbitMQ to ensure that our message broker is available to all services on the logistics-network.
+```yaml
+rabbitmq:
+    image: rabbitmq:3.12-management
+    ports:
+      - "5672:5672"   # AMQP Protocol
+      - "15672:15672" # Management Dashboard
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
 ```
 
-### Step 2: Enabling Module Federation
+### 4. Step 2: The Producer (Shipping Service)
+The Shipping Service needs to decouple the logic. Instead of calling a PDF generator directly, it sends a message.
 
-We use the `@angular-architects/module-federation` schematic to automatically configure Webpack. This creates a `webpack.config.js` file in your project root, which allows you to customize the build process.
+In the Configuration class (RabbitMqConfig.java) we define a Topic Exchange. This allows multiple services (Fleet, Analytics, FaaS) to listen to the same event if needed.
 
-```shell
-# Configure the Shell as a "host"
-cd shell-app
-ng add @angular-architects/module-federation --project shell-app --port 4200 --type host
+```java
+@Configuration
+public class RabbitMqConfig {
+    public static final String EXCHANGE = "shipment_exchange";
+    public static final String ROUTING_KEY = "dispatch.created";
 
-# Configure the Remote as a "remote"
-cd ../remote-app
-ng add @angular-architects/module-federation --project remote-app --port 4201 --type remote
-```
+    @Bean
+    public TopicExchange exchange() {
+        return new TopicExchange(EXCHANGE);
+    }
 
-### Step 3: Configuring the Remote
-
-The "Remote" needs to decide what to share with the world. We typically share the **Routes** configuration so the Host can lazy-load the entire module at once.
-
-File: `remote-app/webpack.config.js`
-
-```typescript
-const { shareAll, withModuleFederationPlugin } = require('@angular-architects/module-federation/webpack');
-
-module.exports = withModuleFederationPlugin({
-  name: 'remote_app', // Unique internal name
-
-  // EXPOSES: What parts of this app can others use?
-  exposes: {
-    // We expose the routes file under the alias './Routes'
-    './Routes': './src/app/app.routes.ts',
-  },
-
-  // SHARED: Prevent loading duplicate libraries (Angular, RxJS, etc.)
-  shared: {
-    ...shareAll({ singleton: true, strictVersion: true, requiredVersion: 'auto' }),
-  },
-});
-```
-
-### Step 4: Configuring the Host
-
-The "Host" needs to know where to find the Remote applications. We map a virtual name to a physical URL.
-
-File: `shell-app/webpack.config.js`
-
-```typescript
-const { shareAll, withModuleFederationPlugin } = require('@angular-architects/module-federation/webpack');
-
-module.exports = withModuleFederationPlugin({
-  // REMOTES: Where are the other apps located?
-  remotes: {
-    // "mfe1" is the variable name we will use in imports
-    // "remote_app" matches the 'name' property in the Remote's config
-    "mfe1": "http://localhost:4201/remoteEntry.js",
-  },
-
-  shared: {
-    ...shareAll({ singleton: true, strictVersion: true, requiredVersion: 'auto' }),
-  },
-});
-```
-
-### Step 5: Lazy Loading the Remote
-
-In the Host's routing configuration, we use standard Angular lazy loading. However, instead of a file path, we import the Virtual Module defined in the Webpack config.
-
-File: `shell-app/src/app/app.routes.ts`
-
-```typescript
-import { Routes } from '@angular/router';
-
-export const routes: Routes = [
-  {
-    path: 'shop',
-    // 'mfe1' matches the key in the Host's webpack.config.js
-    // './Routes' matches the key in the Remote's 'exposes' config
-    loadChildren: () => import('mfe1/Routes').then(m => m.routes)
-  }
-];
-```
-
-*Tip: TypeScript will complain that 'mfe1/Routes' doesn't exist. Create a decl.d.ts file in your src folder:*
-
-```typescript
-declare module 'mfe1/Routes';
-```
-
-## 5. Handling Communication & State
-
-A common challenge in Micro-Frontends is sharing data (like Authentication Tokens) between apps that run in isolation. Since Angular creates separate Dependency Injection trees for the Host and Remote, services are often not singletons across boundaries.
-
-### Strategy 1: Browser Storage (Best for Auth)
-
-Use `localStorage` or `sessionStorage` as the single source of truth.
-
-1. **Host**: User logs in. Host saves token to `localStorage`.
-2. **Remote**: When performing API calls, the Remote reads the token directly from `localStorage`.
-
-### Strategy 2: Custom Events (Best for Actions)
-
-Use standard DOM events to trigger updates across the window.
-
-**Host (Sender):**
-
-```typescript
-// Notify all micro-frontends that an order occurred
-window.dispatchEvent(new CustomEvent('order-update', { detail: { id: 123 } }));
-```
-
-**Remote (Listener):**
-
-```typescript
-ngOnInit() {
-  window.addEventListener('order-update', (event) => {
-    console.log('Refreshing inventory...');
-    this.refreshData();
-  });
+    // JSON conversion
+    @Bean
+    public MessageConverter converter() {
+        return new Jackson2JsonMessageConverter();
+    }
 }
 ```
 
-### Strategy 3: Shared Library (Advanced)
+Publishing the Event
+In the Controller, we capture the data (including transient fields like licensePlate) and fire the event.
 
-For complex state (like a Redux store), you can create a third project (a Library) containing the state logic. Publish this library to NPM (or map it via `tsconfig` paths) and add it to the `shared` array in `webpack.config.js` for both apps. This forces Webpack to share the *exact same instance* of the library.
+```java
+package com.logistics.shippingservice.controller;
 
-## 6. Deployment Considerations
+import com.logistics.shippingservice.dto.ShipmentEvent;
+import com.logistics.shippingservice.entity.Shipment;
+import com.logistics.shippingservice.kafka.AnalyticsProducer;
+import com.logistics.shippingservice.rabbitmq.config.RabbitMqConfig;
+import com.logistics.shippingservice.rabbitmq.producer.ShipmentProducer;
+import com.logistics.shippingservice.repository.ShipmentRepository;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
+import org.springframework.web.bind.annotation.*;
 
-When moving to production, `localhost` URLs won't work.
+import java.util.List;
+import java.util.UUID;
 
-1. **Dynamic Remotes:** Do not hardcode URLs in `webpack.config.js`. Instead, load a `manifest.json` file at runtime that maps remote names to their production URLs.
-2. **CORS**: Your Remote applications (e.g., `shop.example.com`) must enable CORS headers (`Access-Control-Allow-Origin: *`) so the Host (`app.example.com`) can download their JavaScript bundles.
-3. **Versioning**: Ensure your Host and Remotes share compatible versions of Angular to prevent runtime errors.
+@RestController
+@RequestMapping("/api/shipments")
+@RequiredArgsConstructor
+@Slf4j
+public class ShipmentController {
+
+    private final ShipmentRepository shipmentRepository;
+    private final ShipmentProducer shipmentProducer;
+    private final AnalyticsProducer analyticsProducer;
+    private final SimpMessagingTemplate messagingTemplate;
+
+    /**
+     * GET Endpoint: Lists all shipments for the dashboard history.
+     */
+    @GetMapping
+    public List<Shipment> getAllShipments() {
+        return shipmentRepository.findAll();
+    }
+
+    /**
+     * POST Endpoint: Dispatches a shipment.
+     * Triggers: Database Save, RabbitMQ (Fleet + PDF), Kafka (Analytics), WebSocket (UI)
+     */
+    @PostMapping("/dispatch")
+    public String dispatchShipment(@RequestBody Shipment shipment) {
+        log.info("Received dispatch request for vehicle: {}", shipment.getVehicleId());
+
+        // ---------------------------------------------------------------
+        // 1. CAPTURE TRANSIENT DATA
+        // We must save the license plate string NOW, because it is marked
+        // as @Transient. After repository.save(), Hibernate might reset it.
+        // ---------------------------------------------------------------
+        String plateFromFrontend = shipment.getLicensePlate();
+
+        // Generate System Data
+        shipment.setTrackingId(UUID.randomUUID().toString());
+        shipment.setStatus("DISPATCHED");
+
+        // 2. SAVE TO DATABASE (Synchronous)
+        shipmentRepository.save(shipment);
+        log.info("Shipment saved to DB with ID: {}", shipment.getId());
+
+        // 3. PREPARE EVENT (For RabbitMQ)
+        ShipmentEvent event = new ShipmentEvent();
+        event.setStatus("IN_TRANSIT");
+        event.setMessage("Shipment dispatched via " + shipment.getOrigin());
+        event.setVehicleId(shipment.getVehicleId());
+        event.setWeight(shipment.getWeight());
+        event.setTrackingId(shipment.getTrackingId());
+        event.setOrigin(shipment.getOrigin());
+        event.setDestination(shipment.getDestination());
+
+        // Assign the captured plate (handle nulls safely)
+        if (plateFromFrontend != null && !plateFromFrontend.isEmpty()) {
+            event.setLicensePlate(plateFromFrontend);
+        } else {
+            event.setLicensePlate("ID-" + shipment.getVehicleId());
+        }
+
+        // 4. SEND TO RABBITMQ (Asynchronous)
+        // Triggers the Fleet Service (Update Status) and FaaS (Generate PDF)
+        shipmentProducer.sendMessage(event);
+
+        // 5. SEND TO KAFKA (Asynchronous - Fire & Forget)
+        // Triggers the Analytics Service
+        try {
+            analyticsProducer.sendRouteStats(shipment.getOrigin(), shipment.getDestination());
+        } catch (Exception e) {
+            log.error("Failed to send analytics to Kafka (Non-blocking error)", e);
+        }
+
+        // 6. NOTIFY UI (WebSocket)
+        // Pushes a popup notification to the dashboard
+        String notification = String.format("{\"status\":\"DISPATCHED\", \"trackingId\":\"%s\"}", shipment.getTrackingId());
+        messagingTemplate.convertAndSend("/topic/shipments", notification);
+
+        return "Shipment Dispatched Successfully! Tracking ID: " + shipment.getTrackingId();
+    }
+
+    /**
+     * Endpoint to download a basic label (Direct Backend version)
+     * Note: The PDF version is handled by the FaaS service, not this one.
+     */
+    @GetMapping("/label/{trackingId}")
+    public ResponseEntity<byte[]> getLabel(@PathVariable String trackingId) {
+        String labelContent = "LOGISTICS LABEL\n----------------\nTRACKING: " + trackingId;
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"label-" + trackingId + ".txt\"")
+                .contentType(MediaType.TEXT_PLAIN)
+                .body(labelContent.getBytes());
+    }
+}
+```
+
+### 5. Step 3: The Consumer (Function Service)
+We use Spring Cloud Function, which abstracts away the complexity of messaging. We have to define a Java Consumer bean, and the framework handles the connection to RabbitMQ.
+
+The Business Logic class (WaybillFunction.java):
+This class contains the PDF generation logic using the iText or OpenPDF library.
+
+```java
+@Configuration
+@Slf4j
+public class WaybillFunction {
+
+    @Bean
+    public Consumer<ShipmentEvent> generateWaybill() {
+        return event -> {
+            log.info("Received Event: Generating PDF for {}", event.getTrackingId());
+            createPdf(event);
+        };
+    }
+
+    private void createPdf(ShipmentEvent event) {
+        // PDF Generation Logic (iText/OpenPDF)
+        Document document = new Document();
+        PdfWriter.getInstance(document, new FileOutputStream("waybills/" + event.getTrackingId() + ".pdf"));
+        document.open();
+        document.add(new Paragraph("WAYBILL: " + event.getTrackingId()));
+        document.add(new Paragraph("Vehicle: " + event.getLicensePlate()));
+        document.close();
+    }
+}
+```
+
+The Binding Configuration (application.yml)
+This is the "magic" bridge that links everything together. We tell Spring Cloud Stream to map the generateWaybill function to the shipment_exchange.
+
+```yaml
+spring:
+  cloud:
+    function:
+      definition: generateWaybill
+    stream:
+      bindings:
+        # Syntax: <functionName>-in-<index>
+        generateWaybill-in-0:
+          destination: shipment_exchange # Must match Producer Exchange
+          group: pdf-generators          # Consumer Group (for scaling)
+```
+
+## 6. Challenges & Solutions
+During implementation, I encountered a Transient Data Issue.
+
+Problem: The licensePlate field was not stored in the database (marked as @Transient), so when Hibernate saved the shipment, the field was lost before the event was created.
+
+Solution: Capture the licensePlate string from the incoming JSON before saving the entity to the database. Then, manually injected this value into the RabbitMQ ShipmentEvent.
 
 ## 7. Conclusion
-
-By implementing Module Federation, you achieve:
-
-* **Independent Deployment**: Update the Shop without redeploying the Shell.
-* **Scalability**: Separate teams can work on different domains simultaneously.
-* **Performance**: Code is downloaded only when the user navigates to that specific route.
+   By using this architecture, the Shipping Service remains fast and responsive. Even if the PDF generation takes 5 seconds (or if the FaaS service crashes), the user gets an instant response. RabbitMQ ensures the message is safe and the PDF will be generated eventually, providing a resilient and scalable user experience.
 
 ## 8. References & Resources
 
-* [Dynamic Module Federation with Angular (Nx Guide)](https://nx.dev/docs/technologies/angular/guides/dynamic-module-federation-with-angular)
-* [Module Federation Practice (Community Guide)](https://module-federation.io/practice/frameworks/angular/angular-mfe)
+* [Spring Cloud Function](https://spring.io/projects/spring-cloud-function)
+* [RabbitMq](https://www.rabbitmq.com/#:~:text=you%20name%20it.-,Reliable,messages%20are%20safe%20with%20RabbitMQ.)

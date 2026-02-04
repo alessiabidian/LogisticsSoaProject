@@ -1,5 +1,6 @@
 package com.logistics.functionservice.function;
 
+import com.logistics.functionservice.dto.ShipmentEvent;
 import com.lowagie.text.*;
 import com.lowagie.text.pdf.PdfWriter;
 import com.logistics.functionservice.dto.ShipmentInfo;
@@ -12,6 +13,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.Date;
 import java.util.UUID;
+import java.util.function.Consumer;
 import java.util.function.Function;
 
 @Configuration
@@ -20,13 +22,15 @@ public class WaybillFunction {
 
     public static final String STORAGE_DIR = "generated-waybills";
 
-    // Changed from Consumer to Function so we can return the filename immediately
     @Bean
-    public Function<ShipmentInfo, String> generateWaybill() {
-        return this::createPdf;
+    public Consumer<ShipmentEvent> generateWaybill() {
+        return event -> {
+            log.info("RabbitMQ Event Received for Tracking ID: {}", event.getTrackingId());
+            createPdf(event);
+        };
     }
 
-    private String createPdf(ShipmentInfo info) {
+    public String createPdf(ShipmentEvent event) {
         Document document = new Document();
         try {
             File directory = new File(STORAGE_DIR);
@@ -34,8 +38,7 @@ public class WaybillFunction {
                 directory.mkdirs();
             }
 
-            // Filename: waybill_TRACKING-ID.pdf
-            String fileName = "waybill_" + info.getTrackingId() + ".pdf";
+            String fileName = "waybill_" + event.getTrackingId() + ".pdf";
             File file = new File(directory, fileName);
 
             PdfWriter.getInstance(document, new FileOutputStream(file));
@@ -43,7 +46,7 @@ public class WaybillFunction {
             document.open();
 
             // --- PDF DESIGN ---
-            Font titleFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 24, new java.awt.Color(0, 51, 102)); // Navy Blue
+            Font titleFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 24, new java.awt.Color(0, 51, 102));
             Paragraph title = new Paragraph("OFFICIAL WAYBILL", titleFont);
             title.setAlignment(Element.ALIGN_CENTER);
             document.add(title);
@@ -54,21 +57,24 @@ public class WaybillFunction {
             document.add(new Paragraph("\n--------------------------------------------------\n"));
 
             Font contentFont = FontFactory.getFont(FontFactory.COURIER, 14);
-            document.add(new Paragraph("TRACKING ID:  " + info.getTrackingId(), FontFactory.getFont(FontFactory.COURIER_BOLD, 16)));
-            document.add(new Paragraph("ORIGIN:       " + info.getOrigin(), contentFont));
-            document.add(new Paragraph("DESTINATION:  " + info.getDestination(), contentFont));
-            document.add(new Paragraph("WEIGHT:       " + info.getWeight() + " kg", contentFont));
-            document.add(new Paragraph("VEHICLE:      " + info.getLicensePlate(), contentFont));
+            document.add(new Paragraph("TRACKING ID:  " + event.getTrackingId(), FontFactory.getFont(FontFactory.COURIER_BOLD, 16)));
+
+            // Handle potential nulls safely
+            String origin = event.getOrigin() != null ? event.getOrigin() : "N/A";
+            String dest = event.getDestination() != null ? event.getDestination() : "N/A";
+
+            document.add(new Paragraph("ORIGIN:       " + origin, contentFont));
+            document.add(new Paragraph("DESTINATION:  " + dest, contentFont));
+            document.add(new Paragraph("WEIGHT:       " + event.getWeight() + " kg", contentFont));
+            document.add(new Paragraph("VEHICLE:      " + event.getLicensePlate(), contentFont));
 
             document.add(new Paragraph("\n--------------------------------------------------\n"));
-
-            // Barcode Simulation
-            document.add(new Paragraph("||| || ||| || |||| ||| || " + info.getTrackingId()));
+            document.add(new Paragraph("||| || ||| || |||| ||| || " + event.getTrackingId()));
 
             document.close();
             log.info("Waybill Generated: {}", file.getAbsolutePath());
 
-            return fileName;
+            return fileName; // Return the filename for the Controller
 
         } catch (DocumentException | IOException e) {
             log.error("FaaS Error", e);

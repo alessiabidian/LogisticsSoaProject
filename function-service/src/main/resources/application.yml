@@ -6,7 +6,6 @@ spring:
     name: function-service
 
   rabbitmq:
-    # Use 'logistics-rabbitmq' if in Docker, or 'localhost' if running main method manually
     host: ${RABBITMQ_HOST:logistics-rabbitmq}
     port: 5672
     username: guest
@@ -14,8 +13,14 @@ spring:
 
   cloud:
     function:
-      # MUST match the method name in WaybillFunction.java
+      # matches the method name in WaybillFunction.java
       definition: generateWaybill
+    stream:
+      bindings:
+        generateWaybill-in-0:
+          destination: shipment_exchange
+          group: pdf-generators
+
     #stream:
       #bindings:
         # Syntax: <functionName>-in-<index>
@@ -27,5 +32,4 @@ spring:
 eureka:
   client:
     service-url:
-      # Use the container name for Eureka
       defaultZone: http://${EUREKA_HOST:logistics-registry}:8761/eureka/

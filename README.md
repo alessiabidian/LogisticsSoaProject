@@ -135,31 +135,20 @@ sequenceDiagram
     
     Shell->>Gateway: GET /api/analytics/stats
     Gateway->>Analytics: Fetch Stats
-    Analytics-->>Shell: {"Cluj-Napoca": 5, "Berlin": 2}
+    Analytics-->>Shell: {"Cluj-Napoca": 5, "Timisoara": 2}
     Shell->>User: Update Charts
 ```
 
 ## 5. Technology Stack Summary
 
-| Component       | Technology            | Role                                                                        |
-|-----------------|-----------------------|-----------------------------------------------------------------------------|
-| Frontend Host   | Angular 17            | Shell application, Authentication, WebSocket management.                    |
-| Frontend Remote | Angular 17            | Shop module (Inventory/Tickets), loaded via Webpack Module Federation.      |
-| Gateway         | Spring Cloud Gateway  | Entry point, Security (OAuth2 Resource Server), Client-Side Load Balancing. |
-| Discovery       | Netflix Eureka        | Dynamic service registration and discovery.                                 |
-| Communication   | REST / STOMP / AMQP   | Synchronous API calls, Real-time Push, and Asynchronous Messaging.          |
-| Order Service   | Spring Boot           | Core business logic, Transaction management, State persistence.             |
-| FaaS            | Spring Cloud Function | Stateless PDF generation bound to RabbitMQ via Spring Cloud Stream.         |
-| Analytics       | Spring Boot + Kafka   | High-throughput event ingestion and stream processing.                      |
-| Infrastructure  | Docker Compose        | Orchestration of Postgres, Redis, RabbitMQ, Kafka, Zookeeper, and Keycloak. |
-
-Component,Technology,Role
-Frontend Host,Angular 17,"Shell application, Authentication (Keycloak wrapper), WebSocket client."
-Frontend Remote,Angular 17,"Logistics Module (Shipment Forms, Fleet List), exposed via Module Federation."
-Gateway,Spring Cloud Gateway,"Entry point, OAuth2 Resource Server, Client-Side Load Balancing."
-Discovery,Netflix Eureka,Dynamic service registration and discovery.
-Shipping Service,Spring Boot,Core domain logic. Produces messages to RabbitMQ and Kafka.
-Fleet Service,Spring Boot,Manages vehicles. Consumes RabbitMQ events to update vehicle availability.
-Analytics Service,Spring Boot,Kafka Consumer. Aggregates route data for the dashboard.
-FaaS,Spring Cloud Function,RabbitMQ Consumer. Stateless function that generates PDF Waybills.
-Infrastructure,Docker Compose,"Orchestration of Postgres, Redis, RabbitMQ, Kafka, Zookeeper, and Keycloak."
+| Component         | Technology            | Role                                                                           |
+|-------------------|-----------------------|--------------------------------------------------------------------------------|
+| Frontend Host     | Angular 17            | Shell application, Authentication, WebSocket client.                           |
+| Frontend Remote   | Angular 17            | Logistics Module (Shipment Forms, Fleet List), exposed via Module Federation.  |
+| Gateway           | Spring Cloud Gateway  | Entry point, Security (OAuth2 Resource Server), Client-Side Load Balancing.    |
+| Discovery         | Netflix Eureka        | Dynamic service registration and discovery.                                    |
+| Shipping Service  | Spring Boot           | Core domain logic. Produces messages to RabbitMQ and Kafka.                    |
+| Fleet Service     | Spring Boot           | Manages vehicles. Consumes RabbitMQ events to update vehicle availability.     |
+| FaaS              | Spring Cloud Function | RabbitMQ Consumer. Stateless function that generates PDF Waybills.             |
+| Analytics Service | Spring Boot + Kafka   | Kafka Consumer. Aggregates route data for the dashboard.                       |
+| Infrastructure    | Docker Compose        | Orchestration of Postgres, Redis, RabbitMQ, Kafka, Zookeeper, and Keycloak.    |

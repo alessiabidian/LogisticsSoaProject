@@ -79,6 +79,13 @@ public class ShipmentController {
         event.setMessage("Shipment dispatched via " + shipment.getOrigin());
         event.setVehicleId(shipment.getVehicleId());
         event.setWeight(shipment.getWeight());
+        // -----------------------
+        event.setTrackingId(shipment.getTrackingId());
+        event.setOrigin(shipment.getOrigin());
+        event.setDestination(shipment.getDestination());
+        String plate = shipment.getLicensePlate() != null ? shipment.getLicensePlate() : "ID-" + shipment.getVehicleId();
+        event.setLicensePlate(plate);
+        // -----------------------
         shipmentProducer.sendMessage(event);
 
         // Notify Dashboard via WebSocket
