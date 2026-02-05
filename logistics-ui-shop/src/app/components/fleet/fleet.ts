@@ -124,7 +124,7 @@ export class FleetComponent implements OnInit {
   private cdr = inject(ChangeDetectorRef);
 
   ngOnInit() {
-    // 2. Check for token immediately
+    // check for token immediately
     const token = localStorage.getItem('log_token');
     this.hasToken = !!token;
 

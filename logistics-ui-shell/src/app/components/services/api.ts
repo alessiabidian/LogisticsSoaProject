@@ -57,7 +57,7 @@ export class ApiService {
 
   login(username: string, password: string): Observable<any> {
     const body = new URLSearchParams();
-    body.set('client_id', 'logistics-client'); // FIXED: logistics-client
+    body.set('client_id', 'logistics-client');
     body.set('username', username);
     body.set('password', password);
     body.set('grant_type', 'password');
@@ -82,7 +82,7 @@ export class ApiService {
     window.location.href = '/';
   }
 
-  // --- Fleet / Inventory ---
+  // --- Fleet ---
   getVehicles(): Observable<Vehicle[]> {
     const headers = this.getAuthHeaders(); 
     return this.http.get<Vehicle[]>(`${this.gatewayUrl}/api/vehicles`, { headers });

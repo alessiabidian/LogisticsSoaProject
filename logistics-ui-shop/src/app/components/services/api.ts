@@ -44,7 +44,7 @@ export class ApiService {
   }
 
   logout() {
-    // 1. Clear the stored secrets
+    // clear the stored secrets
     this._token = '';
     this._username = '';
     localStorage.removeItem('log_token');

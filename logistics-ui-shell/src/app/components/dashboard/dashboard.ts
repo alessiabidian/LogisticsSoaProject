@@ -46,7 +46,6 @@ interface CityStat {
   `
 })
 export class DashboardComponent implements OnInit, OnDestroy {
-  // Use a simple dictionary for the stats
   stats = signal<{[key: string]: number}>({});
   private api = inject(ApiService);
   private refreshSub!: Subscription;
@@ -58,7 +57,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
         switchMap(() => this.api.getAnalyticsStats())
       )
       .subscribe({
-        next: (data) => this.stats.set(data), // Just set the raw data from backend
+        next: (data) => this.stats.set(data),
         error: (err) => console.error('Analytics Error', err)
       });
   }

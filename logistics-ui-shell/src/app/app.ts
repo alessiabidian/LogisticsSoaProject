@@ -79,7 +79,6 @@ export class AppComponent implements OnInit {
     this.rxStomp.watch('/topic/shipments').subscribe(msg => {
       const content = this.tryParse(msg.body);
       
-      // We keep setTimeout here just to be safe for notifications
       setTimeout(() => {
           this.notifications.push(`Update: ${content}`);
           setTimeout(() => this.notifications.shift(), 6000);
