@@ -71,21 +71,18 @@ public class WaybillController {
 
     @PostMapping("/generate-download")
     public ResponseEntity<Resource> generateAndDownload(@RequestBody ShipmentEvent event) {
-        // 1. Generate the file using the public method (NOT .apply)
         String filename = waybillFunction.createPdf(event);
 
         if (filename == null) {
             return ResponseEntity.internalServerError().build();
         }
 
-        // Read it back immediately
         try {
             Path filePath = Paths.get(WaybillFunction.STORAGE_DIR).resolve(filename).normalize();
             Resource resource = new UrlResource(filePath.toUri());
 
             return ResponseEntity.ok()
                     .contentType(MediaType.APPLICATION_PDF)
-                    // Use event.getTrackingId() for the download filename
                     .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"waybill-" + event.getTrackingId() + ".pdf\"")
                     .body(resource);
         } catch (MalformedURLException e) {

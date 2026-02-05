@@ -6,5 +6,5 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface ShipmentRepository extends JpaRepository<Shipment, Long> {
-    // This empty interface gives you .save(), .findAll(), .findById() for free!
+    // This empty interface gives .save(), .findAll(), .findById()
 }

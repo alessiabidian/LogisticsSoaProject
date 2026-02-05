@@ -13,7 +13,7 @@ spring:
 
   cloud:
     function:
-      # matches the method name in WaybillFunction.java
+      # matches method name in WaybillFunction.java
       definition: generateWaybill
     stream:
       bindings:

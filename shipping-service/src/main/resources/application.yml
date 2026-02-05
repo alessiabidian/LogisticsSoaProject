@@ -5,13 +5,11 @@ spring:
   application:
     name: shipping-service
   datasource:
-    # Use the container name from docker-compose
     url: jdbc:postgresql://logistics-postgres:5432/admin
     username: admin
     password: password
     driver-class-name: org.postgresql.Driver
   jpa:
-    # Hardcoding the dialect prevents the crash you see in the logs
     database-platform: org.hibernate.dialect.PostgreSQLDialect
     hibernate:
       ddl-auto: update

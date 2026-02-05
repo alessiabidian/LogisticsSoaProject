@@ -73,7 +73,7 @@ public class WaybillFunction {
             document.close();
             log.info("Waybill Generated: {}", file.getAbsolutePath());
 
-            return fileName; // Return the filename for the Controller
+            return fileName;
 
         } catch (DocumentException | IOException e) {
             log.error("FaaS Error", e);

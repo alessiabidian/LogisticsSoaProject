@@ -106,7 +106,7 @@ services:
   function-service:
     build: ./function-service
     container_name: logistics-function
-    ports: [ "8084:8084" ] # <--- EXPOSE THE PORT
+    ports: [ "8084:8084" ]
     depends_on: [ discovery-service, rabbitmq ]
     environment:
       # These match the ${PLACEHOLDERS} in your new application.yml
@@ -116,7 +116,7 @@ services:
       - SPRING_RABBITMQ_HOST=logistics-rabbitmq
       - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://logistics-discovery:8761/eureka/
     volumes:
-      # This puts the PDFs in a folder named 'waybills' in your project root
+      # This puts the PDFs in a folder named 'waybills'
       - ./waybills:/generated-waybills
 
   # --- MICRO FRONTENDS ---
